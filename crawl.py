@@ -20,3 +20,10 @@ MAX_CONCURRENCY = 5        # keep low to avoid rate-limit/bans
 TIMEOUT_TOTAL = 10         # seconds (per request)
 LOW_ID = 1
 HIGH_ID = 150_000
+
+def build_url(sbd: str) -> str:
+    return (
+        f"{BASE_DOMAIN}?"
+        f"{COMPONENT_ID}&{PAGE_ID}"
+        f"&sbd={sbd}&{TYPE}&year={YEAR}"
+    )
