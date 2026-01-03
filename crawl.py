@@ -1,7 +1,7 @@
 import asyncio
 import aiohttp
 from typing import Optional, Dict, List, Tuple
-
+from exporter import ExcelExporter, SUBJECT_COLUMNS
 from tqdm import tqdm  # <-- use normal tqdm for loops
 # ================= CONFIG =================
 
@@ -50,3 +50,15 @@ def is_valid_student(resp: Optional[dict]) -> bool:
         return False
     # business check: model is False/None when not found
     return resp.get("data", {}).get("model") not in (False, None)
+
+def extract_student_row(student_data: dict) -> dict:
+    row = {
+        "candidateNumber": student_data.get("candidateNumber"),
+        "fullName": student_data.get("fullName", "") or "",
+    }
+
+    subject_scores = student_data.get("subjectScores", {}) or {}
+    for subject in SUBJECT_COLUMNS:
+        row[subject] = subject_scores.get(subject, {}).get("point", "X") if subject in subject_scores else "X"
+
+    return row
