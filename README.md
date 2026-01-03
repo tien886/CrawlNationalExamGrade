@@ -1,4 +1,4 @@
-# This is a code sample of crawling data 
+# Crawl national exam grades of all provinces in VN
 ### [REQUIREMENTS]
 You must have the API (always a GET method) to form the data source
 
