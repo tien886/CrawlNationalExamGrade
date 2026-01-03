@@ -135,3 +135,37 @@ async def collect_students_in_province(
 
     pbar.close()
     return rows
+async def main():
+    exporter = ExcelExporter(filename=f"national_exam_{YEAR}.xlsx")
+    province_to_rows: Dict[str, List[dict]] = {}
+
+    timeout = aiohttp.ClientTimeout(total=TIMEOUT_TOTAL)
+
+    # TCPConnector improves performance (connection reuse + limits)
+    connector = aiohttp.TCPConnector(
+        limit=MAX_CONCURRENCY,          # total open connections
+        limit_per_host=MAX_CONCURRENCY, # per host
+        ttl_dns_cache=300,
+        enable_cleanup_closed=True,
+    )
+
+    async with aiohttp.ClientSession(headers=HEADERS, timeout=timeout, connector=connector) as session:
+        provinces = await find_provinces(session)
+
+        print("\nDetected provinces:")
+        for pid, name in provinces:
+            print(f"{pid:02d} → {name}")
+
+        for pid, name in tqdm(provinces, desc="Processing provinces"):
+            max_sid = await find_max_student_id(session, pid)
+            print(f"✔ {name}: max student_id = {max_sid}")
+
+            rows = await collect_students_in_province(session, pid, max_sid)
+            province_to_rows[name] = rows
+
+    out = exporter.export(province_to_rows)
+    print(f"\n✅ Excel saved: {out}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
