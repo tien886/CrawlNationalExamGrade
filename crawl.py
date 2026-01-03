@@ -20,7 +20,8 @@ MAX_CONCURRENCY = 100        # keep low to avoid rate-limit/bans
 TIMEOUT_TOTAL = 10         # seconds (per request)
 LOW_ID = 1
 HIGH_ID = 150_000
-
+# How many student IDs to schedule at once (bigger = faster, but more memory)
+BATCH_SIZE = 1000
 def build_url(sbd: str) -> str:
     return (
         f"{BASE_DOMAIN}?"
@@ -95,3 +96,42 @@ async def find_max_student_id(session: aiohttp.ClientSession, province_id: int) 
             hi = mid - 1
 
     return last_valid
+
+
+# semaphore usage senario, create 1000 requested tasks  at a time 
+# then wait for 100 to finish before let the 101th start
+
+async def collect_students_in_province(
+    session: aiohttp.ClientSession,
+    province_id: int,
+    max_student_id: int,
+    batch_size: int = BATCH_SIZE,
+) -> List[dict]:
+    """
+    True async concurrency:
+    - schedule batch_size requests at once
+    - semaphore enforces MAX_CONCURRENCY
+    """
+    rows: List[dict] = []
+
+    pbar = tqdm(total=max_student_id, desc=f"Province {province_id:02d}", leave=False)
+
+    sid = 1
+    while sid <= max_student_id:
+        end = min(sid + batch_size - 1, max_student_id)
+        tasks = [
+            fetch_student(session, f"{province_id:02d}{cur:06d}")
+            for cur in range(sid, end + 1)
+        ]
+
+        results = await asyncio.gather(*tasks)
+
+        for student_data in results:
+            if student_data:
+                rows.append(extract_student_row(student_data))
+
+        pbar.update(end - sid + 1)
+        sid = end + 1
+
+    pbar.close()
+    return rows
