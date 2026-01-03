@@ -67,3 +67,31 @@ async def fetch_student(session: aiohttp.ClientSession, sbd: str) -> Optional[di
     if not is_valid_student(data):
         return None
     return data["data"]["data"]
+async def find_provinces(session: aiohttp.ClientSession) -> List[Tuple[int, str]]:
+    provinces: List[Tuple[int, str]] = []
+
+    for pid in tqdm(range(1, 65), desc="Detecting provinces"):
+        sbd = f"{pid:02d}000001"
+        data = await fetch_json(session, build_url(sbd))
+        if is_valid_student(data):
+            provinces.append((pid, data["data"]["data"]["examCluster"]))
+
+    return provinces
+
+
+async def find_max_student_id(session: aiohttp.ClientSession, province_id: int) -> int:
+    lo, hi = LOW_ID, HIGH_ID
+    last_valid = 0
+
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        sbd = f"{province_id:02d}{mid:06d}"
+        data = await fetch_json(session, build_url(sbd))
+
+        if is_valid_student(data):
+            last_valid = mid
+            lo = mid + 1
+        else:
+            hi = mid - 1
+
+    return last_valid
