@@ -16,7 +16,7 @@ HEADERS = {
     "Accept": "application/json",
 }
 
-MAX_CONCURRENCY = 5        # keep low to avoid rate-limit/bans
+MAX_CONCURRENCY = 100        # keep low to avoid rate-limit/bans
 TIMEOUT_TOTAL = 10         # seconds (per request)
 LOW_ID = 1
 HIGH_ID = 150_000
@@ -27,3 +27,21 @@ def build_url(sbd: str) -> str:
         f"{COMPONENT_ID}&{PAGE_ID}"
         f"&sbd={sbd}&{TYPE}&year={YEAR}"
     )
+sem = asyncio.Semaphore(MAX_CONCURRENCY)
+async def fetch_json(session: aiohttp.ClientSession, url: str, retries: int = 2) -> Optional[dict]:
+    """
+    Robust fetch:
+    - semaphore limits concurrency
+    - retries transient failures
+    - content_type=None handles wrong/missing Content-Type
+    """
+    for attempt in range(retries + 1):
+        async with sem:
+            try:
+                async with session.get(url) as r:
+                    # sometimes servers return JSON with wrong header; allow it
+                    return await r.json(content_type=None)
+            except Exception:
+                if attempt == retries:
+                    return None
+                await asyncio.sleep(0.2 * (attempt + 1))  # tiny backoff
