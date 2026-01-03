@@ -15,3 +15,8 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0",
     "Accept": "application/json",
 }
+
+MAX_CONCURRENCY = 5        # keep low to avoid rate-limit/bans
+TIMEOUT_TOTAL = 10         # seconds (per request)
+LOW_ID = 1
+HIGH_ID = 150_000
