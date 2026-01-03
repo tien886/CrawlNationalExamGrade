@@ -62,3 +62,8 @@ def extract_student_row(student_data: dict) -> dict:
         row[subject] = subject_scores.get(subject, {}).get("point", "X") if subject in subject_scores else "X"
 
     return row
+async def fetch_student(session: aiohttp.ClientSession, sbd: str) -> Optional[dict]:
+    data = await fetch_json(session, build_url(sbd))
+    if not is_valid_student(data):
+        return None
+    return data["data"]["data"]
