@@ -45,3 +45,8 @@ async def fetch_json(session: aiohttp.ClientSession, url: str, retries: int = 2)
                 if attempt == retries:
                     return None
                 await asyncio.sleep(0.2 * (attempt + 1))  # tiny backoff
+def is_valid_student(resp: Optional[dict]) -> bool:
+    if not resp:
+        return False
+    # business check: model is False/None when not found
+    return resp.get("data", {}).get("model") not in (False, None)
